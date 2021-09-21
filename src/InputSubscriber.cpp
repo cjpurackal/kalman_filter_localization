@@ -9,10 +9,10 @@ var_gnss_(0.1,0.1,0.15)
 	init_pose_sub = nh.subscribe(init_pose_topic, 1, &InputSubscriber::init_pose_callback, this);
 	imu_sub = nh.subscribe(imu_topic, 1, &InputSubscriber::imu_callback, this);
   robot_frame_id_ = "base_link";
-  reference_frame_id_ = "map";
+  reference_frame_id_ = "world";
 	// odom_sub = nh.subscribe(odom_topic, 1, &InputSubscriber::odom_callback, this);
 	gnss_sub = nh.subscribe(gnss_topic, 1, &InputSubscriber::gnss_callback, this);
-  current_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("current_pose", 10);
+  current_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("fused_pose", 10);
 
 }
 

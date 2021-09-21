@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
 	ros::init(argc, argv, "kf_node");
 	ros::NodeHandle nh; 
 	EKFEstimator ekf;
-	InputSubscriber isub("/initial_pose" ,"/imu" ,"/odom" ,"/gnss_pose", nh, ekf);
+	InputSubscriber isub("/initial_pose" ,"/X1/imu/data" ,"/X1/vodom" ,"/gnss_pose", nh, ekf);
 	geometry_msgs::PoseStamped pose;
     Eigen::VectorXd x = Eigen::VectorXd::Zero(ekf.getNumState());
 	x(0) = 0;
@@ -19,7 +19,8 @@ int main(int argc, char *argv[])
 	x(9) = 0;
 	ekf.setInitialX(x);
 	isub.initial_pose_recieved_ = true;
-	isub.use_gnss_ = true;
+	isub.use_gnss_ = false;
+	isub.use_odom_ = true;
 	while (ros::ok())
 	{
 		// pose = isub.getPose();
