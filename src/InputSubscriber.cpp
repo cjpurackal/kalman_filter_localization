@@ -3,13 +3,16 @@
 InputSubscriber::InputSubscriber(std::string init_pose_topic, std::string imu_topic, std::string odom_topic, std::string gnss_topic, ros::NodeHandle nh, EKFEstimator& ekf)
 :ekf_(ekf),
 tfListener(tfbuffer_),
-var_odom_(0.2,0.2,0.2),
-var_gnss_(0.1,0.1,0.15)
+var_odom_(0,0,0),
+var_gnss_(0.1,0.1,0.1),
+odom_trans(0,0,0)
 {
 	init_pose_sub = nh.subscribe(init_pose_topic, 1, &InputSubscriber::init_pose_callback, this);
 	imu_sub = nh.subscribe(imu_topic, 1, &InputSubscriber::imu_callback, this);
   robot_frame_id_ = "base_link";
-  reference_frame_id_ = "world";
+  // reference_frame_id_ = "world";
+  reference_frame_id_ = "map";
+
 	// odom_sub = nh.subscribe(odom_topic, 1, &InputSubscriber::odom_callback, this);
 	gnss_sub = nh.subscribe(gnss_topic, 1, &InputSubscriber::gnss_callback, this);
   current_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("fused_pose", 10);
@@ -106,8 +109,12 @@ void InputSubscriber::odom_callback(const nav_msgs::Odometry msg)
         pose.pose.position.x = current_trans(0, 3);
         pose.pose.position.y = current_trans(1, 3);
         pose.pose.position.z = current_trans(2, 3);
-        measurementUpdate(pose, var_odom_);
 
+        odom_trans(0) = current_trans(0, 3);
+        odom_trans(1) = current_trans(1, 3);
+        odom_trans(2) = current_trans(2, 3);
+        
+        measurementUpdate(pose, var_odom_);
         current_pose_odom_ = current_pose_;
         previous_odom_mat_ = odom_mat;
       }

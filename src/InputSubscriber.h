@@ -38,6 +38,7 @@ private:
     Eigen::Matrix4d previous_odom_mat_{Eigen::Matrix4d::Identity()};
     Eigen::Vector3d var_odom_, var_gnss_;
 	ros::Publisher current_pose_pub_;
+	Eigen::Vector3d odom_trans;
 
 	enum STATE
 	{
