@@ -10,6 +10,7 @@ if __name__ == '__main__':
    static_transformStamped = geometry_msgs.msg.TransformStamped()
 
    static_transformStamped.header.stamp = rospy.Time.now()
+   # static_transformStamped.header.frame_id = "world"
    static_transformStamped.header.frame_id = "map"
    static_transformStamped.child_frame_id = "base_link"
 
