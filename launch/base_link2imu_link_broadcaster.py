@@ -11,8 +11,8 @@ if __name__ == '__main__':
 
    static_transformStamped.header.stamp = rospy.Time.now()
    static_transformStamped.header.frame_id = "base_link"
-   # static_transformStamped.child_frame_id = "X1/base_link/imu_sensor"
-   static_transformStamped.child_frame_id = "imu_link"
+   static_transformStamped.child_frame_id = "X1/base_link/imu_sensor"
+   # static_transformStamped.child_frame_id = "imu_link"
 
 
    static_transformStamped.transform.translation.x = float(0)
