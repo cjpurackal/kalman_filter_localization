@@ -13,7 +13,7 @@ odom_trans(0,0,0)
   // reference_frame_id_ = "world";
   reference_frame_id_ = "map";
 
-	// odom_sub = nh.subscribe(odom_topic, 1, &InputSubscriber::odom_callback, this);
+	odom_sub = nh.subscribe(odom_topic, 1, &InputSubscriber::odom_callback, this);
 	gnss_sub = nh.subscribe(gnss_topic, 1, &InputSubscriber::gnss_callback, this);
   current_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("fused_pose", 10);
 
@@ -21,19 +21,20 @@ odom_trans(0,0,0)
 
 void InputSubscriber::init_pose_callback(const geometry_msgs::PoseStamped msg)
 {
-      std::cout << "initial pose callback" << std::endl;
-      initial_pose_recieved_ = true;
-      current_pose_ = msg;
-      Eigen::VectorXd x = Eigen::VectorXd::Zero(ekf_.getNumState());
-      x(STATE::X) = current_pose_.pose.position.x;
-      x(STATE::Y) = current_pose_.pose.position.y;
-      x(STATE::Z) = current_pose_.pose.position.z;
-      x(STATE::QX) = current_pose_.pose.orientation.x;
-      x(STATE::QY) = current_pose_.pose.orientation.y;
-      x(STATE::QZ) = current_pose_.pose.orientation.z;
-      x(STATE::QW) = current_pose_.pose.orientation.w;
-      ekf_.setInitialX(x);
+    std::cout << "initial pose callback" << std::endl;
+    initial_pose_recieved_ = true;
+    current_pose_ = msg;
+    Eigen::VectorXd x = Eigen::VectorXd::Zero(ekf_.getNumState());
+    x(STATE::X) = current_pose_.pose.position.x;
+    x(STATE::Y) = current_pose_.pose.position.y;
+    x(STATE::Z) = current_pose_.pose.position.z;
+    x(STATE::QX) = current_pose_.pose.orientation.x;
+    x(STATE::QY) = current_pose_.pose.orientation.y;
+    x(STATE::QZ) = current_pose_.pose.orientation.z;
+    x(STATE::QW) = current_pose_.pose.orientation.w;
+    ekf_.setInitialX(x);
 }
+
 
 void InputSubscriber::imu_callback(const sensor_msgs::Imu msg)
 {
@@ -53,22 +54,24 @@ void InputSubscriber::imu_callback(const sensor_msgs::Imu msg)
           // tf2::TimePoint time_point = tf2::TimePoint(
           //   std::chrono::seconds(msg->header.stamp.sec) +
           //   std::chrono::nanoseconds(msg->header.stamp.nanosec));
-		      ros::Time time_point = ros::Time( msg.header.stamp.sec, msg.header.stamp.nsec);
-          const geometry_msgs::TransformStamped transform =
-            tfbuffer_.lookupTransform(
-            robot_frame_id_,
-            msg.header.frame_id,
-            time_point);
-
-          tf2::doTransform(acc_in, acc_out, transform);
-          tf2::doTransform(w_in, w_out, transform);
+          // ros::Time time_point = ros::Time( msg.header.stamp.sec, msg.header.stamp.nsec);
+          //   const geometry_msgs::TransformStamped transform =
+          //     tfbuffer_.lookupTransform(
+          //     robot_frame_id_,
+          //     msg.header.frame_id,
+          //     time_point);
+          //   tf2::doTransform(acc_in, acc_out, transform);
+          //   tf2::doTransform(w_in, w_out, transform);
+          
           transformed_msg.header.stamp = msg.header.stamp;
-          transformed_msg.angular_velocity.x = w_out.vector.x;
-          transformed_msg.angular_velocity.y = w_out.vector.y;
-          transformed_msg.angular_velocity.z = w_out.vector.z;
-          transformed_msg.linear_acceleration.x = acc_out.vector.x;
-          transformed_msg.linear_acceleration.y = acc_out.vector.y;
-          transformed_msg.linear_acceleration.z = acc_out.vector.z;
+          transformed_msg.angular_velocity.x = /*w_out*/w_in.vector.x;
+          transformed_msg.angular_velocity.y = /*w_out*/w_in.vector.y;
+          transformed_msg.angular_velocity.z = /*w_out*/w_in.vector.z;
+          transformed_msg.linear_acceleration.x = /*acc_out*/acc_in.vector.x;
+          transformed_msg.linear_acceleration.y = /*acc_out*/acc_in.vector.y;
+          transformed_msg.linear_acceleration.z = /*acc_out*/acc_in.vector.z;
+          // std::cout<<"transformed_msg.header.stamp = "<<transformed_msg.header.stamp<<std::endl<<"transformed_msg.angular_velocity.x = "<<transformed_msg.angular_velocity.x<<std::endl<<"transformed_msg.angular_velocity.y = "<<transformed_msg.angular_velocity.y<<std::endl<<"transformed_msg.angular_velocity.z = "<<transformed_msg.angular_velocity.z<<std::endl<<"transformed_msg.linear_acceleration.x = "<<transformed_msg.linear_acceleration.x<<std::endl<<"transformed_msg.linear_acceleration.y = "<<transformed_msg.linear_acceleration.y<<std::endl<<"transformed_msg.linear_acceleration.z = "<<transformed_msg.linear_acceleration.z<<std::endl;
+
           predictUpdate(transformed_msg);
         }
         catch (tf2::TransformException & e) 
@@ -85,9 +88,10 @@ geometry_msgs::PoseStamped InputSubscriber::getPose()
 	return current_pose_;
 }
 
-void InputSubscriber::odom_callback(const nav_msgs::Odometry msg)
+void InputSubscriber::odom_callback(const geometry_msgs::PoseWithCovarianceStamped msg)
 {
 
+      // ekf_.printState();
       if (initial_pose_recieved_ && use_odom_) 
       {
         Eigen::Affine3d affine;
@@ -98,11 +102,12 @@ void InputSubscriber::odom_callback(const nav_msgs::Odometry msg)
           previous_odom_mat_ = odom_mat;
           return;
         }
-
         Eigen::Affine3d current_affine;
         tf2::fromMsg(current_pose_odom_.pose, current_affine);
         Eigen::Matrix4d current_trans = current_affine.matrix();
+        // std::cout<<current_trans<<std::endl;
         current_trans = current_trans * previous_odom_mat_.inverse() * odom_mat;
+
 
         geometry_msgs::PoseStamped pose;
         pose.header = msg.header;
@@ -110,9 +115,14 @@ void InputSubscriber::odom_callback(const nav_msgs::Odometry msg)
         pose.pose.position.y = current_trans(1, 3);
         pose.pose.position.z = current_trans(2, 3);
 
-        odom_trans(0) = current_trans(0, 3);
-        odom_trans(1) = current_trans(1, 3);
-        odom_trans(2) = current_trans(2, 3);
+        // odom_trans(0) = current_trans(0, 3);
+        // odom_trans(1) = current_trans(1, 3);
+        // odom_trans(2) = current_trans(2, 3);
+
+        var_odom_(0) = msg.pose.covariance[0];
+        var_odom_(1) = msg.pose.covariance[7];
+        var_odom_(2) = msg.pose.covariance[13];
+
         
         measurementUpdate(pose, var_odom_);
         current_pose_odom_ = current_pose_;
@@ -153,6 +163,7 @@ void InputSubscriber::measurementUpdate( const geometry_msgs::PoseStamped pose_m
   Eigen::Vector3d y = Eigen::Vector3d(pose_msg.pose.position.x,
       pose_msg.pose.position.y,
       pose_msg.pose.position.z);
+
 
   ekf_.observationUpdate(y, variance);
 }

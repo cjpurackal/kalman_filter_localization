@@ -134,7 +134,8 @@ public:
 *
 * P_k = (I - KH)*P_{k-1}
 */
-  void observationUpdate(
+
+  void observationUpdate  (
     const Eigen::Vector3d & y,
     const Eigen::Vector3d & variance
   )
@@ -149,6 +150,15 @@ public:
     H.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
     Eigen::MatrixXd K = P_ * H.transpose() * (H * P_ * H.transpose() + R).inverse();
     Eigen::VectorXd dx = K * (y - x_.segment(STATE::X, 3));
+    // std::cout<<"p_(before) = "<<P_<<std::endl;
+    // std::cout<<"H = "<<H<<std::endl;
+    // std::cout<<"R = "<<R<<std::endl;
+    // std::cout<<"P_ * H.transpose() = "<<P_ * H.transpose()<<std::endl;
+    // std::cout<<"INV = "<<(H * P_ * H.transpose() + R).inverse()<<std::endl;
+    // std::cout<<"K = "<<K<<std::endl;
+    // std::cout<<"y = "<<y<<std::endl;
+    // std::cout<<"x_ = "<<x_<<std::endl;
+    // std::cout<<"dx = "<<dx<<std::endl;
 
     // state
     x_.segment(STATE::X, 3) = x_.segment(STATE::X, 3) + dx.segment(ERROR_STATE::DX, 3);
@@ -157,17 +167,30 @@ public:
       pow(dx(ERROR_STATE::DTHX), 2) +
       pow(dx(ERROR_STATE::DTHY), 2) +
       pow(dx(ERROR_STATE::DTHZ), 2));
+    if(isnan(norm_quat))
+    {
+      exit(0);
+    }
     if (norm_quat < 1e-10) {
       x_.segment(STATE::QX, 4) = Eigen::Vector4d(0, 0, 0, cos(norm_quat / 2));
+      Eigen::Quaterniond dq = Eigen::Quaterniond(0, 0, 0, cos(norm_quat / 2));
+      Eigen::Quaterniond q = Eigen::Quaterniond(x_(STATE::QW), x_(STATE::QX), x_(STATE::QY), x_(STATE::QZ));
+      Eigen::Quaterniond q_new = q * dq;
+      x_.segment(STATE::QX, 4) = Eigen::Vector4d(q_new.x(), q_new.y(), q_new.z(), q_new.w());
     } else {
-      x_.segment(STATE::QX, 4) = Eigen::Vector4d(
+       Eigen::Quaterniond dq = Eigen::Quaterniond(
         sin(norm_quat / 2) * dx(ERROR_STATE::DTHX) / norm_quat,
         sin(norm_quat / 2) * dx(ERROR_STATE::DTHY) / norm_quat,
         sin(norm_quat / 2) * dx(ERROR_STATE::DTHZ) / norm_quat,
         cos(norm_quat / 2));
+        Eigen::Quaterniond q = Eigen::Quaterniond(x_(STATE::QW), x_(STATE::QX), x_(STATE::QY), x_(STATE::QZ));
+        Eigen::Quaterniond q_new = q * dq;
+        x_.segment(STATE::QX, 4) = Eigen::Vector4d(q_new.x(), q_new.y(), q_new.z(), q_new.w());
     }
 
     P_ = (EigenMatrix9d::Identity() - K * H) * P_;
+
+
   }
 
   void setTauGyroBias(const double tau_gyro_bias)
@@ -203,6 +226,12 @@ public:
   int getNumState()
   {
     return num_state_;
+  }
+
+  void printState()
+  {
+    std::cout<<"P_ = "<<P_<<std::endl;
+    std::cout<<"x_ = "<<x_<<std::endl;
   }
 
 private:

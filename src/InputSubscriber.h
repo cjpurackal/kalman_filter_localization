@@ -1,8 +1,6 @@
 #include "ros/ros.h"
 #include "ekf.h"
-#include "sensor_msgs/Imu.h"
 #include "nav_msgs/Odometry.h"
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2/transform_datatypes.h>
@@ -11,6 +9,7 @@
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
+#include "sensor_msgs/Imu.h"
 #include <chrono>
 
 class InputSubscriber
@@ -23,7 +22,7 @@ public:
 	void predictUpdate(const sensor_msgs::Imu imu_msg);
 	void measurementUpdate( const geometry_msgs::PoseStamped pose_msg, const Eigen::Vector3d variance);
 	void imu_callback(const sensor_msgs::Imu msg);
-	void odom_callback(const nav_msgs::Odometry msg);
+	void odom_callback(const geometry_msgs::PoseWithCovarianceStamped msg);
 	void gnss_callback(geometry_msgs::PoseStamped msg);
 	void broadcastPose();
   	bool initial_pose_recieved_{false}, use_odom_{false}, use_gnss_{false};
