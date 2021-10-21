@@ -8,8 +8,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/")
 #set(OpenCV_DIR "/home/developer/co-fusion/deps/opencv-3.1.0/build")
 #set(cv_bridge_DIR "/home/developer/packages/vision_opencv/cv_bridge/install/share/cv_bridge/cmake")
 
-find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs genmsg cv_bridge image_transport tf2 tf2_geometry_msgs tf2_sensor_msgs tf2_ros tf2_eigen) 
-
+find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs sensor_msgs nav_msgs geometry_msgs genmsg cv_bridge image_transport tf2 tf2_geometry_msgs tf2_sensor_msgs tf2_ros tf2_eigen)
 include_directories(${catkin_INCLUDE_DIRS}) 
 catkin_package()
 
